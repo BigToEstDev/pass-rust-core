@@ -595,10 +595,11 @@ mod tests {
         assert_eq!(dt.date(), NaiveDate::from_ymd(2020, 5, 27));
         assert_eq!(dt.time(), NaiveTime::from_hms(22, 11, 36));
 
-        let ldt = Local.from_utc_datetime(&dt); //2020-05-27T15:11:36-07:00 , 7.00 hours UTC time - PDT time
-        println!("ldt is {:?}", ldt);
-        assert_eq!(ldt.date(), Local.ymd(2020, 5, 27));
-        assert_eq!(ldt.time(), NaiveTime::from_hms(15, 11, 36));
+        // No conversion to `Local` here on purpose: `decode_datetime_b64` returns a
+        // UTC-domain `NaiveDateTime`, and converting it to the machine's local
+        // timezone would make the expected wall-clock time (and possibly the
+        // calendar date, across a UTC offset that crosses midnight) depend on
+        // where the test runs - not on anything this function does.
 
         //assert_eq!(d, Some("2020-05-27T22:11:36"));
         // if let Some(d) = dt {
