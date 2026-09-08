@@ -40,10 +40,10 @@ pub use new_db::NewDatabase;
 #[macro_export]
 macro_rules! write_header_with_size {
     ($writer:tt,$id:expr,$data:expr) => {
-        $writer.write(&[$id])?; //header type or inner header type
+        $writer.write_all(&[$id])?; //header type or inner header type
         let size = $data.len() as u32;
-        $writer.write(&size.to_le_bytes())?;
-        $writer.write($data)?;
+        $writer.write_all(&size.to_le_bytes())?;
+        $writer.write_all($data)?;
     };
 }
 

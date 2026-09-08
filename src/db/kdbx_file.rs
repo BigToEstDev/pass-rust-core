@@ -1,4 +1,4 @@
-use crate::write_header_with_size;
+﻿use crate::write_header_with_size;
 
 use super::*;
 
@@ -458,7 +458,7 @@ impl MainHeader {
     ///  [v bytes] Value. Integers are stored in little-endian encoding, and a Bool is one byte (false = 0, true = 1); the other types are clear.
     pub(crate) fn extract_kdf_parameters(&mut self, data: &[u8]) -> Result<()> {
         let mut buf = Cursor::new(Vec::<u8>::new());
-        buf.write(data)?;
+        buf.write_all(data)?;
         buf.seek(SeekFrom::Start(0))?;
         // variant dict version (little endian) expected [0 1] rather the high byte is critical
         // and the loading code should refuse to load the data if the high byte is too high
@@ -561,20 +561,20 @@ impl MainHeader {
         //[0 1] variant dict version (little endian) expected [0 1] rather the high byte  is critical
         //See extract_variant_dict above
 
-        writer.write(&[0u8, 1])?;
+        writer.write_all(&[0u8, 1])?;
 
         let mut write = |vd_type: u8, name: &str, val_bytes: &[u8]| -> Result<()> {
             //Type
-            writer.write(&[vd_type])?;
+            writer.write_all(&[vd_type])?;
             //Name prefixed with size represented as LE bytes
             let name_bytes = name.as_bytes();
             let name_bytes_size = (name_bytes.len() as u32).to_le_bytes();
-            writer.write(&name_bytes_size)?;
-            writer.write(name_bytes)?;
+            writer.write_all(&name_bytes_size)?;
+            writer.write_all(name_bytes)?;
             //Value prefixed with size represented as LE bytes
             let val_bytes_size = (val_bytes.len() as u32).to_le_bytes();
-            writer.write(&val_bytes_size)?;
-            writer.write(val_bytes)?;
+            writer.write_all(&val_bytes_size)?;
+            writer.write_all(val_bytes)?;
             Ok(())
         };
 
@@ -596,15 +596,15 @@ impl MainHeader {
             }
         }
         //IMPORTANT: Need to mark the end of Variant Dict with just END type byte
-        writer.write(&[vd_type::NONE])?;
+        writer.write_all(&[vd_type::NONE])?;
         Ok(writer.into_inner())
     }
 
     pub(crate) fn write_bytes<W: Write + Seek>(&mut self, writer: &mut W) -> Result<()> {
         write_header_with_size!(writer, header_type::CIPHER_ID, &self.cipher_id);
-        writer.write(&[header_type::COMPRESSION_FLAGS])?;
-        writer.write(&(4 as u32).to_le_bytes())?;
-        writer.write(&self.compression_flag.to_le_bytes())?;
+        writer.write_all(&[header_type::COMPRESSION_FLAGS])?;
+        writer.write_all(&(4 as u32).to_le_bytes())?;
+        writer.write_all(&self.compression_flag.to_le_bytes())?;
 
         write_header_with_size!(writer, header_type::MASTER_SEED, &self.master_seed);
         //write kdf parameters
@@ -631,9 +631,9 @@ impl MainHeader {
         };
 
         //End of header [13, 10, 13, 10]
-        writer.write(&[header_type::END_OF_HEADER])?;
-        writer.write(&(4 as u32).to_le_bytes())?;
-        writer.write(&vec![13, 10, 13, 10])?; //End Data
+        writer.write_all(&[header_type::END_OF_HEADER])?;
+        writer.write_all(&(4 as u32).to_le_bytes())?;
+        writer.write_all(&vec![13, 10, 13, 10])?; //End Data
 
         Ok(())
     }
@@ -685,9 +685,9 @@ impl InnerHeader {
         attachment_hashes: Vec<AttachmentHashValue>,
         writer: &mut W,
     ) -> Result<()> {
-        writer.write(&[inner_header_type::STREAM_ID])?;
-        writer.write(&(4 as u32).to_le_bytes())?;
-        writer.write(&self.stream_cipher_id.to_le_bytes())?;
+        writer.write_all(&[inner_header_type::STREAM_ID])?;
+        writer.write_all(&(4 as u32).to_le_bytes())?;
+        writer.write_all(&self.stream_cipher_id.to_le_bytes())?;
 
         write_header_with_size!(
             writer,
@@ -721,10 +721,10 @@ impl InnerHeader {
         }
 
         // End of header - 0 size data
-        writer.write(&[inner_header_type::END_OF_HEADER])?;
+        writer.write_all(&[inner_header_type::END_OF_HEADER])?;
 
         // [0, 0, 0, 0] => 0 bytes size - No inner header data for end marker
-        writer.write(&vec![0u8; 4])?;
+        writer.write_all(&vec![0u8; 4])?;
 
         Ok(())
     }

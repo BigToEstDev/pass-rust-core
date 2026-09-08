@@ -1,4 +1,4 @@
-use std::cmp;
+﻿use std::cmp;
 
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
@@ -294,7 +294,7 @@ impl<'a, T: Read + Seek> KdbxFileReader<'a, T> {
     // Inner header data includes the binary data of any attchments
     fn split_inner_header_xml_content(&mut self, decrypted_data: &[u8]) -> Result<Vec<u8>> {
         let mut buf = Cursor::new(Vec::<u8>::new());
-        buf.write(decrypted_data)?;
+        buf.write_all(decrypted_data)?;
         buf.seek(SeekFrom::Start(0))?;
         let mut hd_t = [0u8; 1];
         loop {
@@ -456,9 +456,9 @@ impl<'a, W: Read + Write + Seek> KdbxFileWriter<'a, W> {
     }
 
     fn write_file_signature(&mut self) -> Result<()> {
-        self.writer.write(&constants::SIG1.to_le_bytes())?;
-        self.writer.write(&constants::SIG2.to_le_bytes())?;
-        self.writer.write(&constants::VERSION_41.to_le_bytes())?;
+        self.writer.write_all(&constants::SIG1.to_le_bytes())?;
+        self.writer.write_all(&constants::SIG2.to_le_bytes())?;
+        self.writer.write_all(&constants::VERSION_41.to_le_bytes())?;
         Ok(())
     }
 
@@ -466,11 +466,11 @@ impl<'a, W: Read + Write + Seek> KdbxFileWriter<'a, W> {
         let header_end = self.writer.stream_position()?;
         let header_data = read_stream_data(&mut self.writer, 0, header_end)?;
         let cal_hash = crypto::sha256_hash_from_slice_vecs(&[&header_data])?;
-        self.writer.write(&cal_hash)?;
+        self.writer.write_all(&cal_hash)?;
 
         let header_hmac_hash =
             crypto::hmac_sha256_from_slices(self.kdbx_file.hmac_key(), &[&header_data])?;
-        self.writer.write(&header_hmac_hash)?;
+        self.writer.write_all(&header_hmac_hash)?;
 
         Ok(())
     }
@@ -511,7 +511,7 @@ impl<'a, W: Read + Write + Seek> KdbxFileWriter<'a, W> {
             // Need to use {} and not the debug one {:?} to avoid \" in the print
             // println!("In db writing: XML content is \n {}", std::str::from_utf8(&v).unwrap());
 
-            buf.write(&v)?;
+            buf.write_all(&v)?;
         }
 
         let start = std::time::Instant::now();
@@ -549,7 +549,7 @@ impl<'a, W: Read + Write + Seek> KdbxFileWriter<'a, W> {
     // Complement to read_hmac_data_blocks that is carried out while reading the database main content
     fn write_hmac_data_blocks(&mut self, payload_data: &[u8]) -> Result<()> {
         let mut payload_data_buf = Cursor::new(Vec::<u8>::new());
-        payload_data_buf.write(payload_data)?;
+        payload_data_buf.write_all(payload_data)?;
         payload_data_buf.seek(SeekFrom::End(0))?;
         let mut remaining_bytes = payload_data_buf.stream_position()?;
 
@@ -579,17 +579,17 @@ impl<'a, W: Read + Write + Seek> KdbxFileWriter<'a, W> {
             )?;
 
             // Write the hmac hash
-            self.writer.write(&blk_hmac_hash)?;
+            self.writer.write_all(&blk_hmac_hash)?;
 
             // Calculate LE 4 bytes of the size of the actual encrypted block
             // And Write the blk size
-            self.writer.write(&blk_size_in_bytes)?;
+            self.writer.write_all(&blk_size_in_bytes)?;
 
             if blk_size == 0 {
                 break;
             }
             // Write the data_buffer of blk_size data (Block data)
-            self.writer.write(&data_buffer)?;
+            self.writer.write_all(&data_buffer)?;
 
             remaining_bytes = remaining_bytes - blk_size;
             blk_size = cmp::min(PAYLOAD_BLOCK_SIZE, remaining_bytes);
