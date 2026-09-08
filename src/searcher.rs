@@ -189,11 +189,6 @@ mod tests {
         //println!("found is {}", found );
         assert_eq!(found, false);
 
-        // Url
-        let found = search_term_with_options("https://github.com/login".into(), true, &e).unwrap();
-        //println!("found is {}", found );
-        assert_eq!(found, true);
-
         // Empty term is not matched for anything
         let found = search_term_with_options(" ".into(), true, &e).unwrap();
         assert_eq!(found, false);

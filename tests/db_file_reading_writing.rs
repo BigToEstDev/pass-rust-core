@@ -1,169 +1,260 @@
 mod common;
+
+use onekeepass_core::db_content;
 use onekeepass_core::db_service::{self, *};
+use uuid::Uuid;
 
-// NOTE:
-// At this time, these tests used as dev time help and are ignored for the public use.
-// Later #[ignore] will be removed once removing dev specific tests
+// All the databases used by these tests are created on the fly under the OS temp dir
+// (create_kdbx / write to a temp path), instead of reading personal .kdbx fixtures.
+// See Step 7 in the docs repo plan for the background.
 
-#[ignore]
+fn temp_path(name: &str) -> String {
+    let mut p = std::env::temp_dir();
+    p.push(format!("{}_{}", name, std::process::id()));
+    p.to_str().unwrap().to_string()
+}
+
+// Builds a NewDatabase via serde (fields are pub(crate)) starting from Default so
+// kdf/cipher_id get valid defaults, then injects the file path + password.
+fn make_new_db(db_key: &str, password: &str) -> NewDatabase {
+    let mut v = serde_json::to_value(NewDatabase::default()).unwrap();
+    v["database_name"] = serde_json::json!("TestDb");
+    v["database_file_name"] = serde_json::json!(db_key);
+    v["password"] = serde_json::json!(password);
+    serde_json::from_value(v).unwrap()
+}
+
+// Creates a Login entry with known field values via the public form-data round trip
+// (EntryFormData's fields are private but Serialize/Deserialize, so we go through
+// serde_json::Value the same way `make_new_db` does for NewDatabase). Returns the
+// new entry's uuid.
+fn insert_login_entry(
+    db_key: &str,
+    parent_group_uuid: &Uuid,
+    title: &str,
+    username: &str,
+    password: &str,
+) -> Uuid {
+    let login_type_uuid = db_content::standard_type_uuid_by_name("Login");
+    let form =
+        db_service::new_entry_form_data_by_id(db_key, login_type_uuid, Some(parent_group_uuid))
+            .unwrap();
+
+    let mut v = serde_json::to_value(&form).unwrap();
+    let entry_uuid_str = v["uuid"].as_str().unwrap().to_string();
+
+    v["title"] = serde_json::json!(title);
+    let section = v["section_fields"]["Login Details"].as_array_mut().unwrap();
+    for field in section.iter_mut() {
+        match field["key"].as_str() {
+            Some("UserName") => field["value"] = serde_json::json!(username),
+            Some("Password") => field["value"] = serde_json::json!(password),
+            _ => {}
+        }
+    }
+
+    let form: EntryFormData = serde_json::from_value(v).unwrap();
+    db_service::insert_entry_from_form_data(db_key, form).unwrap();
+
+    Uuid::parse_str(&entry_uuid_str).unwrap()
+}
+
 #[test]
 fn verify_read_db_file() {
-    println!("Test is called");
-    common::init_logging();
-    common::init_key_main_store();
-    //let r = load_kdbx("/Users/jeyasankar/Documents/OneKeePass/KP/Test1-KP254-Attachment.kdbx", "ss", None); //
-    // let r = load_kdbx(
-    //     "/Users/jeyasankar/Documents/OneKeePass/JeyFix/TJ-fixit.kdbx",
-    //     Some("ss"),
-    //     None,
-    // );
-    let db_key = "/Users/jeyasankar/Documents/OneKeePass/Testcsv.kdbx";
-    // let db_key = "/Users/jeyasankar/Documents/OneKeePass/KP/KP-Database2.kdbx";
-    let r = load_kdbx(db_key, Some("ss"), None);
+    common::init();
 
-    println!("load_kdbx is called r is  {}", r.is_ok());
-    if r.is_err() {
-        println!("load_kdbx is error is   {:?}", r);
-    }
+    let db_key = temp_path("okp_verify_read_db_file.kdbx");
+    let _ = std::fs::remove_file(&db_key);
+    let password = "test-pass-1234";
 
-    let settings = db_service::get_db_settings(db_key).unwrap();
+    let created = create_kdbx(make_new_db(&db_key, password));
+    assert!(created.is_ok(), "create_kdbx failed: {:?}", created);
+    let _ = db_service::close_kdbx(&db_key);
 
-    let json_str = serde_json::to_string_pretty(&settings).unwrap();
-    log::debug!("{}", json_str);
+    // Read (load) the db file back from disk
+    let r = load_kdbx(&db_key, Some(password), None);
+    assert!(r.is_ok(), "load_kdbx failed: {:?}", r);
+
+    let settings = db_service::get_db_settings(&db_key);
+    assert!(settings.is_ok());
+
+    let _ = db_service::close_kdbx(&db_key);
+    let _ = std::fs::remove_file(&db_key);
 }
 
-#[ignore]
 #[test]
 fn verify_read_write_db_file() {
-    common::init_logging();
-    common::init_key_main_store();
-    let db_key = "/Users/jeyasankar/Documents/OneKeePass/Testcsv.kdbx";
+    common::init();
 
-    // Copy the kdbx file to a temp location and use that as db_key
+    let db_key = temp_path("okp_verify_read_write_db_file.kdbx");
+    let _ = std::fs::remove_file(&db_key);
+    let password = "test-pass-1234";
 
-    let r = load_kdbx(db_key, Some("ss"), None);
+    let created = create_kdbx(make_new_db(&db_key, password));
+    assert!(created.is_ok(), "create_kdbx failed: {:?}", created);
 
-    if r.is_err() {
-        println!("load_kdbx is error is   {:?}", r);
-    }
-    assert!(r.is_ok());
-
-    // Add some changes to db
-    let mut settings = db_service::get_db_settings(db_key).unwrap();
-
-    let json_str = serde_json::to_string_pretty(&settings).unwrap();
-    log::debug!("{}", json_str);
-
+    // Change something and save
+    let mut settings = db_service::get_db_settings(&db_key).unwrap();
     settings.set_database_name("Changed");
-    db_service::set_db_settings(db_key, settings).unwrap();
+    db_service::set_db_settings(&db_key, settings).unwrap();
 
-    // Save the chnages
-    let _kdbx_saved = db_service::save_kdbx_with_backup(db_key, None, true).unwrap();
-    assert!(true);
+    let saved = db_service::save_kdbx_with_backup(&db_key, None, true);
+    assert!(saved.is_ok(), "save_kdbx_with_backup failed: {:?}", saved);
 
-    // Read back and verify the changes
+    let _ = db_service::close_kdbx(&db_key);
 
-    let r = load_kdbx(db_key, Some("ss"), None);
+    // Read back and verify the change survived the round trip
+    let r = load_kdbx(&db_key, Some(password), None);
+    assert!(r.is_ok(), "reload after save failed: {:?}", r);
 
-    if r.is_err() {
-        println!("2 load_kdbx is error is   {:?}", r);
-    }
-    assert!(r.is_ok());
+    let settings = db_service::get_db_settings(&db_key).unwrap();
+    assert_eq!(settings.get_database_name(), "Changed");
+
+    let _ = db_service::close_kdbx(&db_key);
+    let _ = std::fs::remove_file(&db_key);
 }
 
-#[ignore]
 #[test]
 fn verify_read_db_and_export_xml() {
-    common::init_logging();
-    common::init_key_main_store();
+    common::init();
 
-    // let db_key = "/Users/jeyasankar/Documents/OneKeePass/Test-Obj-del-OKP1.kdbx";
-    let db_key = "/Users/jeyasankar/Documents/OneKeePass/Test-Obj-del-OKP1-CH1.kdbx";
-    // let db_key = "/Users/jeyasankar/Documents/OneKeePass/MyOTP1-kp2.kdbx";
-    // let db_key = "/Users/jeyasankar/Documents/OneKeePass/KP/KP-Database1.kdbx";
-    let r = load_kdbx(db_key, Some("ss"), None);
+    let db_key = temp_path("okp_verify_export_xml.kdbx");
+    let _ = std::fs::remove_file(&db_key);
+    let password = "test-pass-1234";
 
-    if r.is_err() {
-        println!("load_kdbx is error is   {:?}", r);
-    }
+    let created = create_kdbx(make_new_db(&db_key, password));
+    assert!(created.is_ok(), "create_kdbx failed: {:?}", created);
 
-    assert!(r.is_ok());
+    let root_uuid = db_service::groups_summary_data(&db_key).unwrap().root_uuid;
+    insert_login_entry(&db_key, &root_uuid, "Site One", "user1", "pass1");
 
-    let r = db_service::export_as_xml(db_key, "Test1.xml");
-    //println!("db_service::export_as_xml error is   {:?}", r);
-    assert!(r.is_ok(), "db_service::export_as_xml error is   {:?}", r);
+    let xml_path = temp_path("okp_verify_export_xml_out.xml");
+    let _ = std::fs::remove_file(&xml_path);
 
-    println!("Xml is written");
+    let r = db_service::export_as_xml(&db_key, &xml_path);
+    assert!(r.is_ok(), "export_as_xml failed: {:?}", r);
+
+    let xml_content = std::fs::read_to_string(&xml_path).unwrap();
+    assert!(!xml_content.is_empty());
+    assert!(xml_content.contains("Site One"));
+
+    let _ = std::fs::remove_file(&xml_path);
+    let _ = db_service::close_kdbx(&db_key);
+    let _ = std::fs::remove_file(&db_key);
 }
 
-#[ignore]
 #[test]
 fn verify_db_merge() {
-    common::init_logging();
-    common::init_key_main_store();
+    common::init();
 
-    let target_db_key = "/Users/jeyasankar/Documents/OneKeePass/TextXC1.kdbx";
-    // let db_key = "/Users/jeyasankar/Documents/OneKeePass/MyOTP1-kp2.kdbx";
-    let r = load_kdbx(target_db_key, Some("ss"), None);
+    let target_db_key = temp_path("okp_verify_merge_target.kdbx");
+    let source_db_key = temp_path("okp_verify_merge_source.kdbx");
+    let _ = std::fs::remove_file(&target_db_key);
+    let _ = std::fs::remove_file(&source_db_key);
+    let password = "test-pass-1234";
 
-    if r.is_err() {
-        println!("load_kdbx is error is   {:?}", r);
-    }
+    let created = create_kdbx(make_new_db(&target_db_key, password));
+    assert!(created.is_ok(), "create_kdbx (target) failed: {:?}", created);
+    let created = create_kdbx(make_new_db(&source_db_key, password));
+    assert!(created.is_ok(), "create_kdbx (source) failed: {:?}", created);
 
-    assert!(r.is_ok());
+    // Add an entry only to the source db - this is what the merge should bring over
+    let source_root_uuid = db_service::groups_summary_data(&source_db_key)
+        .unwrap()
+        .root_uuid;
+    let entry_uuid = insert_login_entry(
+        &source_db_key,
+        &source_root_uuid,
+        "Merged Site",
+        "merged-user",
+        "merged-pass",
+    );
 
-    let source_db_key = "/Users/jeyasankar/Documents/OneKeePass/TextXC1-1.kdbx";
-    // let db_key = "/Users/jeyasankar/Documents/OneKeePass/MyOTP1-kp2.kdbx";
-    let r = load_kdbx(source_db_key, Some("ss"), None);
+    let merge_result =
+        db_service::merge_databases(&target_db_key, &source_db_key, Some(password), None);
+    assert!(merge_result.is_ok(), "merge_databases failed: {:?}", merge_result);
 
-    if r.is_err() {
-        println!("load_kdbx is error is   {:?}", r);
-    }
+    let merge_result_json = serde_json::to_value(merge_result.unwrap()).unwrap();
+    assert_eq!(merge_result_json["merge_done"], serde_json::json!(true));
+    assert_eq!(
+        merge_result_json["added_entries"].as_array().unwrap().len(),
+        1
+    );
 
-    assert!(r.is_ok());
+    // The merged entry must now be readable from the target db with its original uuid
+    let merged_entry = db_service::get_entry_form_data_by_id(&target_db_key, &entry_uuid);
+    assert!(merged_entry.is_ok(), "merged entry not found in target: {:?}", merged_entry);
 
-    // let target_db_key = "not found";
-
-    db_service::merge_databases(target_db_key, source_db_key, Some("ss"), None).unwrap();
-
-    assert!(true);
+    let _ = db_service::close_kdbx(&target_db_key);
+    let _ = db_service::close_kdbx(&source_db_key);
+    let _ = std::fs::remove_file(&target_db_key);
+    let _ = std::fs::remove_file(&source_db_key);
 }
 
-#[ignore]
 #[test]
 fn verify_read_save_as_db_file() {
-    common::init_key_main_store();
-    let db_key = "/Users/jeyasankar/Documents/OneKeePass/Test1-Auto.kdbx";
-    let r = load_kdbx(&db_key, Some("ss"), None);
-    assert!(r.is_ok());
+    common::init();
 
-    let database_file_name = "/Users/jeyasankar/Documents/OneKeePass/Test1-Auto-sa.kdbx";
-    let wr = save_as_kdbx(db_key, database_file_name).unwrap();
-    println!("Save As call is done {}", &wr.database_name);
+    let db_key = temp_path("okp_verify_save_as.kdbx");
+    let database_file_name = temp_path("okp_verify_save_as_copy.kdbx");
+    let _ = std::fs::remove_file(&db_key);
+    let _ = std::fs::remove_file(&database_file_name);
+    let password = "test-pass-1234";
 
-    // Read back
-    let r = load_kdbx(&database_file_name, Some("ss"), None);
-    assert!(r.is_ok());
+    let created = create_kdbx(make_new_db(&db_key, password));
+    assert!(created.is_ok(), "create_kdbx failed: {:?}", created);
+
+    let root_uuid = db_service::groups_summary_data(&db_key).unwrap().root_uuid;
+    insert_login_entry(&db_key, &root_uuid, "Site One", "user1", "pass1");
+
+    let wr = save_as_kdbx(&db_key, &database_file_name);
+    assert!(wr.is_ok(), "save_as_kdbx failed: {:?}", wr);
+
+    // Read back the copy and verify it opens and matches the original content
+    let r = load_kdbx(&database_file_name, Some(password), None);
+    assert!(r.is_ok(), "load_kdbx of the saved-as copy failed: {:?}", r);
+
+    let settings = db_service::get_db_settings(&database_file_name).unwrap();
+    assert_eq!(settings.get_database_name(), "TestDb");
+
+    let _ = db_service::close_kdbx(&db_key);
+    let _ = db_service::close_kdbx(&database_file_name);
+    let _ = std::fs::remove_file(&db_key);
+    let _ = std::fs::remove_file(&database_file_name);
 }
 
-#[ignore]
 #[test]
 fn verify_entry_1() {
-    // get_entry_form_data_by_id
     common::init();
-    //let db_key = "/Users/jeyasankar/Documents/OneKeePass/JeyFix/TJ-fixit.kdbx";
-    let db_key = "/Users/jeyasankar/Documents/OneKeePass/Test-OTP2.kdbx";
 
-    let r = load_kdbx(db_key, Some("ss"), None);
-    assert!(r.is_ok());
+    let db_key = temp_path("okp_verify_entry_1.kdbx");
+    let _ = std::fs::remove_file(&db_key);
+    let password = "test-pass-1234";
 
-    //"3b8a5c10-3ec2-4afa-ab8b-e46aa43b1a18" or "3b8a5c103ec24afaab8be46aa43b1a18"
-    let entry_uuid_str = "991c0ddc-2531-4ec1-96e2-580687d376da";
-    let entry_uuid = uuid::Uuid::parse_str(entry_uuid_str).unwrap();
+    let created = create_kdbx(make_new_db(&db_key, password));
+    assert!(created.is_ok(), "create_kdbx failed: {:?}", created);
 
-    let entry_form = get_entry_form_data_by_id(db_key, &entry_uuid);
-    assert!(entry_form.is_ok());
-    let entry_form = entry_form.unwrap();
+    let root_uuid = db_service::groups_summary_data(&db_key).unwrap().root_uuid;
+    let entry_uuid =
+        insert_login_entry(&db_key, &root_uuid, "My Test Entry", "testuser", "s3cret");
 
-    //println!("entry_form is {:?}",entry_form);
+    let entry_form = get_entry_form_data_by_id(&db_key, &entry_uuid);
+    assert!(entry_form.is_ok(), "get_entry_form_data_by_id failed: {:?}", entry_form);
+
+    let v = serde_json::to_value(entry_form.unwrap()).unwrap();
+    assert_eq!(v["title"], serde_json::json!("My Test Entry"));
+
+    let section = v["section_fields"]["Login Details"].as_array().unwrap();
+    let field_value = |key: &str| {
+        section
+            .iter()
+            .find(|f| f["key"] == serde_json::json!(key))
+            .and_then(|f| f["value"].as_str())
+            .map(|s| s.to_string())
+    };
+    assert_eq!(field_value("UserName").as_deref(), Some("testuser"));
+    assert_eq!(field_value("Password").as_deref(), Some("s3cret"));
+
+    let _ = db_service::close_kdbx(&db_key);
+    let _ = std::fs::remove_file(&db_key);
 }

@@ -258,18 +258,32 @@ mod tests {
         println!("Entropy: {:?}", scheme.entropy().bits());
     }
 
-    #[ignore]
     #[test]
     fn verify_loading_diced_file() {
-        // We can use builder pattern also
-        // let mut c_builder = BasicConfigBuilder::<word::WordSampler>::default();
-        // c_builder.separator("value").build();
+        // A small diced-wordlist generated in the test itself instead of reading an
+        // external wordlist file (no dictionary fixtures in this repo).
+        let dir = std::env::temp_dir();
+        let wl_path = dir.join(format!(
+            "pass_core_test_verify_loading_diced_file_{}.txt",
+            std::process::id()
+        ));
+        let diced_words = [
+            "11111 apple",
+            "11112 banana",
+            "11113 cherry",
+            "11114 date",
+            "11115 elder",
+            "11116 fig",
+            "11121 grape",
+            "11122 honey",
+            "11123 iris",
+            "11124 jam",
+        ];
+        std::fs::write(&wl_path, diced_words.join("\n")).unwrap();
 
-        let path = std::env::current_dir().unwrap();
-        println!(" Current dir is {:?}", &path); // test_data/wordlists/wordlist_jp.tx
-        let wl_dir_p = path.join("test_data/wordlists/wordlist_jp.txt"); // fr-freelang
+        let wl = word::WordList::load_diced(&wl_path).unwrap();
 
-        let wl = word::WordList::load_diced(wl_dir_p).unwrap();
+        std::fs::remove_file(&wl_path).unwrap();
 
         let config = BasicConfig {
             words: 5,
@@ -281,21 +295,18 @@ mod tests {
 
         let scheme = config.to_scheme();
         let p = scheme.generate();
-        let ap: PasswordScore = (&p).into();
-        println!("Passphrase: {:?} with score {:?}", &p, ap);
-        println!("Entropy: {:?}", scheme.entropy().bits());
+        let _ap: PasswordScore = (&p).into();
 
-        let p = scheme.generate();
-        let ap: PasswordScore = (&p).into();
-        println!("Passphrase: {:?} with score {:?}", &p, ap);
-        println!("Entropy: {:?}", scheme.entropy().bits());
-
-        let p = scheme.generate();
-        let ap: PasswordScore = (&p).into();
-        println!("Passphrase: {:?} with score {:?}", &p, ap);
-        println!("Entropy: {:?}", scheme.entropy().bits());
-
-        assert!(true);
+        // 5 words joined by "-" produce 4 separators
+        assert_eq!(p.matches('-').count(), 4);
+        for word in p.split('-') {
+            assert!(
+                diced_words
+                    .iter()
+                    .any(|dw| dw.ends_with(&word.to_lowercase())),
+                "unexpected word {word} not from generated wordlist"
+            );
+        }
     }
 }
 

@@ -85,52 +85,6 @@ pub fn sha256_hash_from_slice(data: &[u8]) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use std::io::{BufReader, Read};
-
-    #[ignore]
-    #[test]
-    fn verify_large_file_hash256() {
-        use std::fs;
-        use std::time::Instant;
-        // hex d4e06bcc6f614cd4b261fc6034529edb205b31b0e56824490a91350c3640806a
-        let path = "/Users/jeyasankar/Downloads/Android/android-studio-2021.2.1.16-mac_arm.dmg";
-        let input = fs::File::open(path).unwrap();
-        let mut reader = BufReader::new(input);
-
-        // assert!(botan::HashFunction::new("SHA-256").is_ok());
-
-        let start = Instant::now();
-        let digest = {
-            let mut hasher = botan::HashFunction::new("SHA-256").unwrap();
-            println!("Started hashing ...");
-
-            // Reads the complete file in one go
-            // let mut buf = vec![];
-            // reader.read_to_end(&mut buf).unwrap();
-            // hasher.update(&buf).unwrap();
-            // hasher.finish().unwrap()
-
-            let mut buffer = [0; 1024];
-            loop {
-                let count = reader.read(&mut buffer).unwrap();
-                if count == 0 {
-                    break;
-                }
-                hasher.update(&buffer[..count]).unwrap();
-            }
-            hasher.finish().unwrap()
-        };
-
-        let duration = start.elapsed();
-        println!("Completed hashing ...duration {:?}", duration);
-
-        //println!("Digest hex is {}", hex::encode(&digest));
-        assert!(
-            hex::encode(&digest)
-                == "d4e06bcc6f614cd4b261fc6034529edb205b31b0e56824490a91350c3640806a"
-        )
-    }
-
     #[ignore]
     #[test]
     fn check_hmac_sha256() {

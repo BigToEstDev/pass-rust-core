@@ -156,6 +156,7 @@ impl KeyFileData {
 #[cfg(test)]
 mod tests {
     use super::{FileKey, KeyFileData};
+    use crate::{crypto, xml_parse::FileKeyXmlWriter};
 
     // --- Non-ignored unit tests ---
 
@@ -231,29 +232,53 @@ mod tests {
         assert!(result.is_none());
     }
 
-    #[ignore]
     #[test]
     fn verify_xml_key_file() {
-        let path = "/Users/jeyasankar/Documents/OneKeePass/f1/mytestkey.keyx";
-        let final_hash = vec![
-            171, 166, 129, 178, 198, 225, 156, 116, 230, 113, 237, 236, 65, 213, 172, 9, 144, 137,
-            244, 180, 96, 89, 55, 181, 179, 226, 17, 173, 0, 86, 179, 37,
-        ];
-        let fk = FileKey::open(path).unwrap();
+        // Generate a valid xml key file's content in memory (same helper the
+        // production `write_xml` uses) so we know the expected raw key data
+        // up front, then write it to a temp file and open it via `FileKey::open`.
+        let key_file_data = KeyFileData::generate_key_data().unwrap();
+        let expected_data = hex::decode(key_file_data.data.as_ref().unwrap()).unwrap();
 
+        let mut buf: Vec<u8> = Vec::new();
+        {
+            let mut xml_writer = FileKeyXmlWriter::new_with_indent(&mut buf);
+            xml_writer.write(&key_file_data).unwrap();
+        }
+
+        let dir = std::env::temp_dir();
+        let path = dir.join(format!(
+            "pass_core_test_verify_xml_key_file_{}.keyx",
+            std::process::id()
+        ));
+        std::fs::write(&path, &buf).unwrap();
+
+        let fk = FileKey::open(path.to_str().unwrap()).unwrap();
         let h = fk.content_hash();
 
-        println!("h is {:?}", h);
+        std::fs::remove_file(&path).unwrap();
 
-        assert!(final_hash == h)
+        assert_eq!(expected_data, h);
     }
 
-    #[ignore]
     #[test]
     fn verify_any_key_file() {
-        let path = "/Users/jeyasankar/Documents/OneKeePass/test_key_file";
-        let fk = FileKey::open(path).unwrap();
+        // A "raw" (non-xml) key file: its content hash is just sha256 of the bytes.
+        let content = b"some arbitrary key file bytes used only in this test";
+
+        let dir = std::env::temp_dir();
+        let path = dir.join(format!(
+            "pass_core_test_verify_any_key_file_{}.bin",
+            std::process::id()
+        ));
+        std::fs::write(&path, content).unwrap();
+
+        let fk = FileKey::open(path.to_str().unwrap()).unwrap();
         let h = fk.content_hash();
-        println!("h is {:?}", h);
+
+        std::fs::remove_file(&path).unwrap();
+
+        let expected = crypto::sha256_hash_from_slice(content).unwrap();
+        assert_eq!(expected, h);
     }
 }

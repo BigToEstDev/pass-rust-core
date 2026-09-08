@@ -83,12 +83,6 @@ pub fn init_log_lib_info() {
 #[cfg(test)]
 #[allow(unused)]
 mod tests {
-    use std::{
-        fs::{self, File},
-        io::{BufReader, Read},
-        time::Instant,
-    };
-
     use super::*;
     use crate::util::init_test_logging;
 
@@ -144,51 +138,33 @@ mod tests {
         assert_eq!(text.as_bytes(), decrypted);
     }
 
-    fn read_file_data() -> Vec<u8> {
-        // File size is 1.06 GB
-        let path = "/Users/jeyasankar/Downloads/Android/android-studio-2021.2.1.16-mac_arm.dmg";
-        let input = fs::File::open(path).unwrap();
-        let mut reader = BufReader::new(input);
-
-        let mut data: Vec<u8> = vec![];
-        reader.read_to_end(&mut data).unwrap();
-        println!(
-            "File data reading is done and returning all data bytes ; size {}",
-            data.len()
-        );
+    // Generates deterministic pseudo-random data in memory instead of reading an
+    // external file (no local fixtures in this repo).
+    fn generated_data(size: usize) -> Vec<u8> {
+        let mut data = Vec::with_capacity(size);
+        let mut state: u32 = 0x1234_5678;
+        for _ in 0..size {
+            // Simple xorshift32 PRNG - deterministic, no external deps needed
+            state ^= state << 13;
+            state ^= state >> 17;
+            state ^= state << 5;
+            data.push((state & 0xFF) as u8);
+        }
         data
     }
 
-    fn data_file() -> File {
-        // File size is 1.06 GB
-        let path = "/Users/jeyasankar/Downloads/Android/android-studio-2021.2.1.16-mac_arm.dmg";
-        let file = fs::File::open(&path).unwrap();
-        file
-    }
-
-    #[ignore]
     #[test]
     fn verify_aes256_file_data_encrypt_decrypt() {
         init_log_lib_info();
         let (uuid, enc_iv) = ContentCipherId::Aes256.uuid_with_iv().unwrap();
         let cipher = ContentCipher::try_from(&uuid, &enc_iv).unwrap();
 
-        let data: Vec<u8> = read_file_data();
+        // A few MB of generated data, large enough to exercise multi-block encryption
+        let data: Vec<u8> = generated_data(4 * 1024 * 1024);
         let key = get_random_bytes::<32>();
 
-        let timing = Instant::now();
         let encrypted = cipher.encrypt(&data, &key).unwrap();
-        println!(
-            "Encryption elapsed time {} seconds",
-            timing.elapsed().as_secs()
-        );
-
-        let timing = Instant::now();
         let decrypted = cipher.decrypt(&encrypted, &key).unwrap();
-        println!(
-            "Decryption elapsed time {} seconds",
-            timing.elapsed().as_secs()
-        );
 
         assert_eq!(data, decrypted);
     }

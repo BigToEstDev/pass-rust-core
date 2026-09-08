@@ -1063,21 +1063,37 @@ mod tests {
         assert!(records.is_empty());
     }
 
-    #[ignore]
     #[test]
     fn verify1() {
-        let cfile = "/Users/jeyasankar/Downloads/enpass1.csv";
+        // A small csv generated in the test itself instead of reading an external file
+        let dir = std::env::temp_dir();
+        let path = dir.join(format!("pass_core_test_csv_reader_verify1_{}.csv", std::process::id()));
+        std::fs::write(
+            &path,
+            "Title,Username,Password\nSite One,user1,pass1\nSite Two,user2,pass2\n",
+        )
+        .unwrap();
+
         let mut opt = CsvImportOptions::default();
         opt.has_headers = true;
-        let imp = CsvImport::read_from_path(cfile, Some(opt)).unwrap();
+        let imp = CsvImport::read_from_path(&path, Some(opt)).unwrap();
 
-        println!("Header row returned {:?}", &imp);
+        std::fs::remove_file(&path).unwrap();
 
-        CsvImport::create_entries();
+        assert_eq!(imp.headers, vec!["Title", "Username", "Password"]);
+
+        let records = super::NON_HEADER_RECORDS.get().unwrap().lock().unwrap();
+        assert_eq!(
+            *records,
+            vec![
+                record(&["Site One", "user1", "pass1"]),
+                record(&["Site Two", "user2", "pass2"]),
+            ]
+        );
+        drop(records);
 
         CsvImport::clear_stored_records();
-        println!("-----------");
-
-        CsvImport::create_entries();
+        let records = super::NON_HEADER_RECORDS.get().unwrap().lock().unwrap();
+        assert!(records.is_empty());
     }
 }

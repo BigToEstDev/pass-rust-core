@@ -1,4 +1,4 @@
-use quick_xml::escape::unescape;
+﻿use quick_xml::escape::unescape;
 use quick_xml::events::attributes::{Attribute, Attributes};
 use quick_xml::events::Event;
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText};
@@ -1771,15 +1771,6 @@ mod tests {
             .try_init();
     }
 
-    fn test_file(name: &str) -> PathBuf {
-        let mut path = env::current_dir().unwrap();
-        //println!("The current directory is {}", path.display());
-        path.push("test_data");
-        path.push(name);
-        //println!("The current directory is {}", path.display());
-        path
-    }
-
     #[ignore]
     #[test]
     fn verify_escape_unescape() {
@@ -1944,28 +1935,120 @@ mod tests {
         assert_eq!(r.is_err(), true);
     }
 
-    #[ignore]
+    // KeePass-XML sample used by `read_sample_xml` / `read_write_sample_xml`, embedded
+    // directly (no external/personal fixture file). The two Protected values
+    // (Column2, Password) are encrypted here with the given key, in document order,
+    // so a cipher built from the same key can decrypt them back during parsing.
+    // (A mismatched key would still "succeed" but leave the parser holding invalid
+    // UTF-8 - the crate's process_basic64_str falls back to from_utf8_unchecked in
+    // that case, which is later a panic waiting to happen, not something a test
+    // should trigger on purpose.)
+    fn sample_kdbx_xml(key: &Vec<u8>) -> String {
+        let mut enc_cipher = ProtectedContentStreamCipher::try_from(3, key).unwrap();
+        // Encrypted in the same order the fields appear below: Column2 then Password
+        let column2_protected = enc_cipher
+            .process_content_b64_str("protected column2 value")
+            .unwrap();
+        let password_protected = enc_cipher.process_content_b64_str("s3cret-password").unwrap();
+
+        format!(
+            r#"
+        <?xml version="1.0" encoding="utf-8" standalone="yes"?>
+        <KeePassFile>
+            <Meta>
+                <Generator>OneKeePass</Generator>
+            </Meta>
+            <UnhandledTag> </UnhandledTag>
+            <Root>
+                <Group>
+                    <UUID>3aBY+AcLQmiPas0vjK2zng==</UUID>
+                    <Name>Root</Name>
+                    <Notes>Some text comes here</Notes>
+                    <IconID>48</IconID>
+                    <Times>
+                        <CreationTime>J9pg1g4AAAA=</CreationTime>
+                        <LastModificationTime>J9pg1g4AAAA=</LastModificationTime>
+                        <LastAccessTime>/OZp2A4AAAA=</LastAccessTime>
+                        <ExpiryTime>J9pg1g4AAAA=</ExpiryTime>
+                        <Expires>False</Expires>
+                        <UsageCount>4</UsageCount>
+                        <LocationChanged>J9pg1g4AAAA=</LocationChanged>
+                    </Times>
+                    <Group>
+                        <Name>MyGroup1</Name>
+                        <UUID>RRITlCo4TMKXYUPQ09yAvw==</UUID>
+                        <IconID>59</IconID>
+                        <Tags/>
+                        <Notes>This is my first group.
+                            Hello first</Notes>
+                        <IsExpanded>True</IsExpanded>
+                        <Entry>
+                            <UUID>+Hf3wkQhQ46qUntgLmDGYw==</UUID>
+                            <IconID>59</IconID>
+                            <Tags/>
+                            <Times>
+                                <LastModificationTime>MNxg1g4AAAA=</LastModificationTime>
+                                <CreationTime>b9tg1g4AAAA=</CreationTime>
+                                <LastAccessTime>MNxg1g4AAAA=</LastAccessTime>
+                                <ExpiryTime>b9tg1g4AAAA=</ExpiryTime>
+                                <Expires>False</Expires>
+                                <UsageCount>0</UsageCount>
+                            </Times>
+                                <String>
+                                    <Key>UserName</Key>
+                                    <Value>user1</Value>
+                                </String>
+                                <String>
+                                    <Key>Column1</Key>
+                                    <Value>This is first column</Value>
+                                </String>
+                                <String>
+                                    <Key>Column2</Key>
+                                    <Value Protected="True">{column2_protected}</Value>
+                                </String>
+                                <String>
+                                    <Key>Password</Key>
+                                    <Value Protected="True">{password_protected}</Value>
+                                </String>
+                                <String>
+                                    <Key>Notes</Key>
+                                    <Value>For oracle</Value>
+                                </String>
+                                <String>
+                                    <Key>Title</Key>
+                                    <Value>My Title 1</Value>
+                                </String>
+                                <String>
+                                    <Key>URL</Key>
+                                    <Value>https://www.oracle.com</Value>
+                                </String>
+                                <CustomData>
+                                </CustomData>
+                                <AutoType>
+                                    <Enabled>True</Enabled>
+                                    <DefaultSequence/>
+                                </AutoType>
+                                <History>
+                                </History>
+                            </Entry>
+                    </Group>
+                </Group>
+            </Root>
+        </KeePassFile>
+        "#
+        )
+    }
+
     #[test]
     fn read_sample_xml() {
         init();
         log::info!("This record will be captured by `cargo test`");
-        let file_name = test_file("PasswordsXC1-Tags.xml"); //PasswordsXC1-Tags.xml
-                                                            //let file_name = "/path/to/test_file.xml".to_string();
-        let file_name =
-            "/Users/jeyasankar/mytemp/Keepass-sample/RustDevSamples/xml/PasswordsXC1-Tags.xml";
-        // This is the inner stream key used to decrypt the Protected data. This should have been the key
-        // used to encrypt the protected data in this test xml file
-        let key = vec![
-            42u8, 60, 253, 132, 99, 97, 132, 162, 253, 31, 45, 229, 230, 138, 239, 197, 67, 148,
-            33, 95, 61, 173, 215, 65, 108, 76, 108, 45, 127, 145, 70, 170, 3, 169, 234, 244, 250,
-            160, 189, 73, 146, 131, 226, 102, 250, 198, 17, 140, 102, 145, 185, 162, 71, 181, 212,
-            222, 210, 61, 150, 150, 242, 57, 151, 126,
-        ];
 
+        let key = crate::crypto::get_random_bytes::<32>();
+        let xml = sample_kdbx_xml(&key);
         let cipher = ProtectedContentStreamCipher::try_from(3, &key).unwrap();
-        //Read the test xml file
-        let d = fs::read(file_name).unwrap();
-        let mut reader = XmlReader::new(&d[..], Some(cipher));
+
+        let mut reader = XmlReader::new(xml.as_bytes(), Some(cipher));
         let r = reader.parse();
         if let Err(e) = &r {
             println!("Error is {:?}", e);
@@ -1974,27 +2057,13 @@ mod tests {
         println!(" Kp is {:?}", r.unwrap());
     }
 
-    #[ignore]
     #[test]
     fn read_write_sample_xml() {
-        let file_name = test_file("PasswordsXC1-Tags.xml"); //TODO Need to add this test xml to repo
-                                                            // Using local sample KeePass xml content
-        let file_name =
-            "~/mytemp/Keepass-sample/RustDevSamples/xml/PasswordsXC1-Tags.xml";
-
-        //This is the inner stream key used to decrypt the Protected data of sunch as password in this particular xml content
-        // This key will not work with other xml content!
-        let key = vec![
-            42u8, 60, 253, 132, 99, 97, 132, 162, 253, 31, 45, 229, 230, 138, 239, 197, 67, 148,
-            33, 95, 61, 173, 215, 65, 108, 76, 108, 45, 127, 145, 70, 170, 3, 169, 234, 244, 250,
-            160, 189, 73, 146, 131, 226, 102, 250, 198, 17, 140, 102, 145, 185, 162, 71, 181, 212,
-            222, 210, 61, 150, 150, 242, 57, 151, 126,
-        ];
-
+        let key = crate::crypto::get_random_bytes::<32>();
+        let xml = sample_kdbx_xml(&key);
         let cipher = ProtectedContentStreamCipher::try_from(3, &key).unwrap();
-        //Read the test xml file
-        let d = fs::read(file_name).unwrap();
-        let mut reader = super::XmlReader::new(&d[..], Some(cipher));
+
+        let mut reader = super::XmlReader::new(xml.as_bytes(), Some(cipher));
         let r = reader.parse();
         if let Err(e) = &r {
             println!("Error is {:?}", e);
