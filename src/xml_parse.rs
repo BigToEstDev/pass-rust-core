@@ -2039,6 +2039,18 @@ mod tests {
         )
     }
 
+    // Looks up a field value by key on the single entry `sample_kdbx_xml` creates.
+    // Guards against a change (e.g. a `quick-xml` upgrade) that parses without error
+    // but silently corrupts the decoded text content.
+    fn sample_entry_field_value(kp: &KeepassFile, key: &str) -> Option<String> {
+        kp.root
+            .all_entries()
+            .values()
+            .next()
+            .and_then(|e| e.entry_field.get_key_values().into_iter().find(|kv| kv.key == key))
+            .map(|kv| kv.value.clone())
+    }
+
     #[test]
     fn read_sample_xml() {
         init();
@@ -2054,7 +2066,36 @@ mod tests {
             println!("Error is {:?}", e);
         }
         assert_eq!(r.is_ok(), true);
-        println!(" Kp is {:?}", r.unwrap());
+        let kp = r.unwrap();
+        println!(" Kp is {:?}", &kp);
+
+        // Plain (non-Protected) field values must survive decoding unchanged.
+        assert_eq!(
+            sample_entry_field_value(&kp, "UserName").as_deref(),
+            Some("user1")
+        );
+        assert_eq!(
+            sample_entry_field_value(&kp, "Title").as_deref(),
+            Some("My Title 1")
+        );
+        assert_eq!(
+            sample_entry_field_value(&kp, "URL").as_deref(),
+            Some("https://www.oracle.com")
+        );
+        assert_eq!(
+            sample_entry_field_value(&kp, "Notes").as_deref(),
+            Some("For oracle")
+        );
+        // Protected fields decrypt with the same key used to encrypt them in
+        // `sample_kdbx_xml`, so their plaintext must also come through unchanged.
+        assert_eq!(
+            sample_entry_field_value(&kp, "Password").as_deref(),
+            Some("s3cret-password")
+        );
+        assert_eq!(
+            sample_entry_field_value(&kp, "Column2").as_deref(),
+            Some("protected column2 value")
+        );
     }
 
     #[test]
@@ -2079,9 +2120,28 @@ mod tests {
         }
         assert_eq!(write_result.is_ok(), true);
 
+        // Re-parse what was just written and compare against the original values -
+        // guards the write path the same way `read_sample_xml` guards the read path
+        // (a fresh cipher instance is needed on each side: the stream cipher is
+        // stateful, and both the write above and this re-parse consume its
+        // keystream from the start, independently of each other).
+        let xml_content = write_result.unwrap();
+        let reparse_cipher = ProtectedContentStreamCipher::try_from(3, &key).unwrap();
+        let mut reparse_reader = XmlReader::new(&xml_content[..], Some(reparse_cipher));
+        let reparsed = reparse_reader.parse();
+        assert!(reparsed.is_ok(), "re-parsing written xml failed: {:?}", reparsed);
+        let reparsed_kp = reparsed.unwrap();
+
+        for field in ["UserName", "Title", "URL", "Notes", "Password", "Column2"] {
+            assert_eq!(
+                sample_entry_field_value(&kp, field),
+                sample_entry_field_value(&reparsed_kp, field),
+                "field {field} changed across write+re-parse round trip"
+            );
+        }
+
         // Use the following to print the xml content output to the console for visual inspection
 
-        // let xml_content = write_result.unwrap();
         // // Need to use {} and not the debug one {:?} to avoid \" in the printed output
         // println!(
         //     "XML content is \n {}",
