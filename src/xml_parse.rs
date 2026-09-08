@@ -40,7 +40,12 @@ macro_rules! read_tags {
                     match e.name().as_ref() {
                         $($start_tag => {
                             let content = $self.reader.read_text(QName($start_tag))?;
-                            $start_tag_action(content.to_string(),&mut e.attributes(),&mut $self.stream_cipher);
+                            // BytesText no longer implements Display/ToString (quick-xml 0.41) -
+                            // .decode() gives the same raw (not entity-unescaped) content the old
+                            // .to_string() did; callers that need unescaping already do it
+                            // themselves via content_unescape() (see read_key_value, group notes).
+                            let content = content.decode().map_err(quick_xml::Error::from)?.into_owned();
+                            $start_tag_action(content,&mut e.attributes(),&mut $self.stream_cipher);
                         }
                         )*
 
@@ -222,6 +227,10 @@ impl<'a> XmlReader<'a> {
                 Ok(Event::DocType(_)) => {}
                 Ok(Event::PI(_)) => {}
                 Ok(Event::Text(_)) => {}
+                // A general entity reference (e.g. `&amp;`) is now reported as its own
+                // event (quick-xml 0.38+) instead of being inlined into Event::Text.
+                // Only relevant between top-level tags, where text is ignored anyway.
+                Ok(Event::GeneralRef(_)) => {}
                 Ok(Event::Start(ref e)) => {
                     // if !xml_decl_available {
                     //     return Err(Error::XmlReadingFailed(format!(
@@ -1396,6 +1405,9 @@ impl<'a> FileKeyXmlReader<'a> {
                 Ok(Event::DocType(_)) => {}
                 Ok(Event::PI(_)) => {}
                 Ok(Event::Text(_)) => {}
+                // A general entity reference (e.g. `&amp;`) is now reported as its own
+                // event (quick-xml 0.38+) instead of being inlined into Event::Text.
+                Ok(Event::GeneralRef(_)) => {}
 
                 Ok(Event::Start(ref e)) => {
                     if !xml_decl_available {
