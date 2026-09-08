@@ -484,24 +484,3 @@ pub mod inner_header_type {
     pub const CHACHA20_STREAM: u32 = 3; //LE Bytes (3 0 0 0)
 }
 
-#[cfg(test)]
-#[allow(dead_code)]
-#[allow(unused)]
-mod tests {
-
-    #[ignore]
-    #[test]
-    fn generate_uuid() {
-        let uid = uuid::Uuid::new_v4();
-        println!("{}", crate::util::as_hex_array_formatted(uid.as_bytes()));
-        println!("{}", uid.to_string());
-    }
-
-    #[ignore]
-    #[test]
-    fn generate_uuid_as_bytes() {
-        let uuid_str = "7c02bb82-79a7-4ac0-927d-114a00648238";
-        let uuid = uuid::Uuid::parse_str(&uuid_str).unwrap();
-        println!("{}", crate::util::as_hex_array_formatted(uuid.as_bytes()));
-    }
-}

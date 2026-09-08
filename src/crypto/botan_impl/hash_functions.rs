@@ -1,4 +1,4 @@
-use crate::error::Result;
+﻿use crate::error::Result;
 
 pub fn verify_hmac_sha256(key: &[u8], data: &[&[u8]], test_hash: &[u8]) -> Result<bool> {
     let mut hmac = botan::MsgAuthCode::new("HMAC(SHA-256)")?;
@@ -85,7 +85,6 @@ pub fn sha256_hash_from_slice(data: &[u8]) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    #[ignore]
     #[test]
     fn check_hmac_sha256() {
         use super::*;

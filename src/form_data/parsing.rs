@@ -684,7 +684,6 @@ mod tests {
         assert_eq!(r.unwrap().1, PlaceHolderType::Reference);
     }
 
-    #[ignore]
     #[test]
     fn verify_place_holder_name_parsing() {
         use super::PlaceHolderType::*;
@@ -723,7 +722,6 @@ mod tests {
         assert_eq!(r, Ok(("", AnyName)));
     }
 
-    #[ignore]
     #[test]
     fn verify_recursive_use() {
         let mut entry_fields = HashMap::<String, String>::default();
@@ -754,7 +752,6 @@ mod tests {
         );
     }
 
-    #[ignore]
     #[test]
     fn verify_parsing_non_existing_ref() {
         let mut entry_fields = HashMap::<String, String>::default();
@@ -785,7 +782,6 @@ mod tests {
         );
     }
 
-    #[ignore]
     #[test]
     fn verify_not_supported_ref_source_search() {
         let mut entry_fields = HashMap::<String, String>::default();
@@ -804,7 +800,6 @@ mod tests {
         );
     }
 
-    #[ignore]
     #[test]
     fn verify_unknown_placeholder_name() {
         let mut entry_fields = HashMap::<String, String>::default();
@@ -829,7 +824,6 @@ mod tests {
         );
     }
 
-    #[ignore]
     #[test]
     fn verify_custom_field_parsing() {
         let mut entry_fields = HashMap::<String, String>::default();
@@ -855,7 +849,6 @@ mod tests {
         );
     }
 
-    #[ignore]
     #[test]
     fn verify_place_holder_in_custom_field() {
         let mut entry_fields = HashMap::<String, String>::default();
@@ -874,88 +867,11 @@ mod tests {
             "\n parsed ef {:?} \n\n modified fields {:?}",
             &ef.entry_fields, &ef.modified_fields
         );
-    }
 
-    #[ignore]
-    #[test]
-    fn verify_main_parser() {
-        let mut parser = alt((field_parser(), no_field_parser()));
-        //let r = parser("https:://MyAccount-John Doe REF:U@I:5017C6460FED43FFB16FD85C0F875D0A/{USERNAME}");
-        let r = parser("https:://{TITLE}/{USERNAME}");
-        println!(" r is {:?}", r);
-    }
-
-    #[ignore]
-    #[test]
-    fn verify_part1() {
-        let s = "kdbx://{DB_DIR}/f1/PasswordsUsesKeyFile2.kdbx";
-
-        let pat: [char; 2] = ['/', '\\'];
-        let v = s.rsplit_once(pat);
-
-        println!("v is {:?}", &v);
-
-        let s = "kdbx://{DB_DIR}\\f1\\PasswordsUsesKeyFile2.kdbx";
-        let v = s.rsplit_once(pat);
-
-        println!("v is {:?}", &v);
-
-        let s = "kdbx://.\\PasswordsUsesKeyFile2.kdbx";
-        let v = s.rsplit_once(pat);
-        println!("v is {:?}", &v);
-
-        let s = "kdbx://./PasswordsUsesKeyFile2.kdbx";
-        let v = s.rsplit_once(pat);
-        println!("v is {:?}", &v);
-
-        let s = "kdbx://PasswordsUsesKeyFile2.kdbx";
-        let v = s.rsplit_once(pat);
-        println!("v is {:?}", &v);
-
-        let s = "kdbx://";
-        let v = s.rsplit_once(pat);
-        println!("v is {:?}", &v);
-
-        let s = "./my_key.keyx";
-        let v = s.rsplit_once(pat);
-        println!("v is {:?} , contains pat {}", &v, s.contains(pat));
-
-        let s = "my_key.keyx";
-        let v = s.rsplit_once(pat);
-        println!("v is {:?} , contains pat {}", &v, s.contains(pat));
-    }
-
-    #[ignore]
-    #[test]
-    fn verify_drive() {
-        const FILE_PROVIDER_IDS: [&str; 11] = [
-            r"com.android.externalstorage.documents",
-            r"com.android.providers.downloads.documents",
-            r"com.google.android.apps.docs.storage",
-            //
-            r"com.dropbox.product.android.dbapp.document_provider.documents",
-            r"com.microsoft.skydrive.content.StorageAccessProvider",
-            r"mega.privacy.android.app",
-            r"com.nextcloud.client",
-            r"com.owncloud.android",
-            r"me.proton.android.drive",
-            //
-            r"idrive",
-            r"IDrive",
-        ];
-
-        let re = regex::RegexSet::new(&FILE_PROVIDER_IDS).unwrap();
-
-        //let full_file_name_uri = "content://my_file/com.nextcloud.client.content.provider/name=23232";
-
-        let full_file_name_uri = "content://my_file/IDrive.client.content.provider/name=23232";
-
-        let matches: Vec<_> = re.matches(full_file_name_uri).into_iter().collect();
-
-        println!(
-            "Matches {:?}, {:?}",
-            matches,
-            matches.first().map(|n| FILE_PROVIDER_IDS[*n])
+        // The standard field's own value is substituted in for {URL}
+        assert_eq!(
+            ef.entry_fields.get("CUSTOM FIELD1").unwrap(),
+            "www.oracle.com"
         );
     }
 }

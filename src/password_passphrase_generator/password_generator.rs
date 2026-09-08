@@ -316,17 +316,6 @@ mod tests {
         assert_eq!(analyzed.length, 15);
     }
 
-    #[ignore]
-    #[test]
-    fn verify_password_1() {
-        let mut po = PasswordGenerationOptions::new();
-        po.symbols = true;
-        po.length = 21;
-        let pwd = po.generate().unwrap();
-        println!("P is {}", pwd);
-    }
-
-    #[ignore]
     #[test]
     fn verify_analyze() {
         let mut po = PasswordGenerationOptions::new();
@@ -341,7 +330,6 @@ mod tests {
         // println!("result {}", r);
     }
 
-    #[ignore]
     #[test]
     fn verify_readable_password() {
         //See

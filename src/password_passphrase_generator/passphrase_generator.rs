@@ -182,7 +182,7 @@ mod pass_phrase_impl {
 
 #[cfg(test)]
 mod tests {
-    use chbs::{config::BasicConfig, passphrase, probability::Probability, scheme::ToScheme, word};
+    use chbs::{config::BasicConfig, probability::Probability, scheme::ToScheme, word};
 
     use crate::db_service::PasswordScore;
 
@@ -196,7 +196,6 @@ mod tests {
         }
     }
 
-    #[ignore]
     #[test]
     fn verify_with_phrase_generation_options() {
         let mut opt = PassphraseGenerationOptions::default();
@@ -219,7 +218,6 @@ mod tests {
         assert_eq!(p.password.split("-").count(), 3, "Expected 3");
     }
 
-    #[ignore]
     #[test]
     fn verify_deserialized_option() {
         let opt_s = r#"{
@@ -240,22 +238,6 @@ mod tests {
         let opt = serde_json::from_str::<PassphraseGenerationOptions>(&opt_s).unwrap();
         let p = opt.generate(&WordListLoaderImpl {}).unwrap();
         assert_eq!(p.password.split("-").count(), 4, "Expected 4");
-    }
-
-    #[ignore]
-    #[test]
-    fn verify1() {
-        println!("Passphrase: {:?}", passphrase());
-
-        let mut config = BasicConfig::default();
-        config.words = 8;
-        config.separator = "  -".into();
-        config.capitalize_first = Probability::Always;
-        //config.capitalize_words = Probability::half();
-        let scheme = config.to_scheme();
-
-        println!("Passphrase: {:?}", scheme.generate());
-        println!("Entropy: {:?}", scheme.entropy().bits());
     }
 
     #[test]

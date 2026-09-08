@@ -988,7 +988,6 @@ mod tests {
     use crate::db_content::*;
     use crate::form_data::*;
 
-    #[ignore]
     #[test]
     fn verify_place_holder_parsing() {
         let mut root = Root::new();
@@ -1035,7 +1034,6 @@ mod tests {
         assert_eq!("My first https://www.oracle.com name", resolved);
     }
 
-    #[ignore]
     #[test]
     fn verify_creating_display_entry() {
         let uuid = uuid::Builder::from_slice(&entry_type_uuid::LOGIN)

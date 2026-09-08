@@ -775,16 +775,6 @@ mod tests {
         let s2 = "";
         assert_eq!(strip_spaces(s2).is_empty(), true);
     }
-
-    #[ignore]
-    #[test]
-    fn example_decode_datetime() {
-        let ndt = decode_datetime_b64("btWN3w4AAAA=");
-        println!("dt is {:?}", ndt);
-        let dt = ndt.unwrap();
-        let ldt = Local.from_utc_datetime(&dt);
-        println!("ldt is {:?}", ldt);
-    }
 }
 
 // Useful to validate performace of compression

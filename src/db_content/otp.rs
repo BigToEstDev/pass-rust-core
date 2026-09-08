@@ -1,4 +1,4 @@
-use std::{
+﻿use std::{
     fmt,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -510,8 +510,6 @@ mod tests {
 
         m
     }
-
-    #[ignore]
     #[test]
     fn verify_totp_sha1_with_test_vectors() {
         init_test_logging();
@@ -528,8 +526,6 @@ mod tests {
             );
         }
     }
-
-    #[ignore]
     #[test]
     fn verify_totp_sha256_with_test_vectors() {
         let data = test_rfc_values();
@@ -545,8 +541,6 @@ mod tests {
             );
         }
     }
-
-    #[ignore]
     #[test]
     fn verify_totp_sha512_with_test_vectors() {
         let data = test_rfc_values();
@@ -562,8 +556,6 @@ mod tests {
             );
         }
     }
-
-    #[ignore]
     #[test]
     fn verify_using_settings() {
         //from_otp_settings
@@ -598,8 +590,6 @@ mod tests {
 
         println!("Error is {:?}", otp);
     }
-
-    #[ignore]
     #[test]
     fn from_url_err() {
         // HOTP is not supported
@@ -633,8 +623,6 @@ mod tests {
         }
         assert!(r.is_err());
     }
-
-    #[ignore]
     #[test]
     fn verify_url_max_digits_period() {
         init_test_logging();
@@ -649,8 +637,6 @@ mod tests {
 
         println!("Generated Token is {}", n.unwrap());
     }
-
-    #[ignore]
     #[test]
     fn verify_url_min_digits_period() {
         init_test_logging();
@@ -665,8 +651,6 @@ mod tests {
         assert!(n.is_ok());
         println!("Generated Token is {}", n.unwrap());
     }
-
-    #[ignore]
     #[test]
     fn verify_url_with_lowercase_secret() {
         init_test_logging();
@@ -694,8 +678,6 @@ mod tests {
         }
         assert!(r.is_ok());
     }
-
-    #[ignore]
     #[test]
     fn verify_url_digits_range_error() {
         init_test_logging();
@@ -712,8 +694,6 @@ mod tests {
 
         assert!(r.is_err());
     }
-
-    #[ignore]
     #[test]
     fn verify_url_period_range_error() {
         init_test_logging();
@@ -732,8 +712,6 @@ mod tests {
 
         assert!(r.is_err());
     }
-
-    #[ignore]
     #[test]
     fn url_for_secret_matches_sha1_without_issuer() {
         // "KRSXG5CTMVRXEZLUKN2XAZLSKNSWG4TFOQ" is the base32 encoded value
@@ -753,8 +731,6 @@ mod tests {
             "otpauth://totp/john.doe%40github.com?secret=KRSXG5CTMVRXEZLUKN2XAZLSKNSWG4TFOQ"
         );
     }
-
-    #[ignore]
     #[test]
     fn url_for_secret_matches_sha1() {
         let totp = OtpData::new(
@@ -769,8 +745,6 @@ mod tests {
         let url = totp.get_url();
         assert_eq!(url.as_str(), "otpauth://totp/Github:john.doe%40github.com?secret=KRSXG5CTMVRXEZLUKN2XAZLSKNSWG4TFOQ&issuer=Github");
     }
-
-    #[ignore]
     #[test]
     fn url_for_secret_matches_sha256() {
         let totp = OtpData::new(
@@ -785,8 +759,6 @@ mod tests {
         let url = totp.get_url();
         assert_eq!(url.as_str(), "otpauth://totp/Github:john.doe%40github.com?secret=KRSXG5CTMVRXEZLUKN2XAZLSKNSWG4TFOQ&algorithm=SHA256&issuer=Github");
     }
-
-    #[ignore]
     #[test]
     fn url_for_secret_matches_sha512() {
         let totp = OtpData::new(
@@ -801,8 +773,6 @@ mod tests {
         let url = totp.get_url();
         assert_eq!(url.as_str(), "otpauth://totp/Github:john.doe%40github.com?secret=KRSXG5CTMVRXEZLUKN2XAZLSKNSWG4TFOQ&algorithm=SHA512&issuer=Github");
     }
-
-    #[ignore]
     #[test]
     fn from_url_to_url() {
         let totp = OtpData::from_url("otpauth://totp/Github:john.doe%40github.com?issuer=Github&secret=KRSXG5CTMVRXEZLUKN2XAZLSKNSWG4TFOQ&digits=6&algorithm=SHA1").unwrap();
@@ -817,8 +787,6 @@ mod tests {
         .unwrap();
         assert_eq!(totp.get_url(), totp_bis.get_url());
     }
-
-    #[ignore]
     #[test]
     fn generate_token_current() {
         let totp = OtpData::new(
@@ -841,76 +809,6 @@ mod tests {
     }
 
     ///////////
-
-    #[ignore]
-    #[test]
-    fn verify1_totp_59_sec() {
-        let key = data_encoding::BASE32_NOPAD.encode("12345678901234567890".as_bytes());
-        // Encoded key is GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ
-        println!("Encoded key is {}", key);
-        let dk = data_encoding::BASE32_NOPAD.decode(key.as_bytes()).unwrap();
-        println!("Decoded key is {:?}", String::from_utf8(dk));
-        let mut od = OtpData::from_key(key.as_str()).unwrap();
-        od.digits = 8;
-        println!(
-            "od generate  is {:?} with ttl {:?}",
-            od.generate(59),
-            od.ttl()
-        );
-
-        let key = data_encoding::BASE32_NOPAD.encode("12345678901234567890123456789012".as_bytes());
-        println!("Encoded key is {}", key);
-        let mut od = OtpData::from_key(key.as_str()).unwrap();
-        od.digits = 8;
-        od.algorithm = OtpAlgorithm::SHA256;
-        println!(
-            "od generate  is {:?} with ttl {:?}",
-            od.generate(59),
-            od.ttl()
-        );
-
-        let key = data_encoding::BASE32_NOPAD
-            .encode("1234567890123456789012345678901234567890123456789012345678901234".as_bytes());
-        let mut od = OtpData::from_key(key.as_str()).unwrap();
-        od.digits = 8;
-        od.algorithm = OtpAlgorithm::SHA512;
-        println!(
-            "od generate  is {:?} with ttl {:?}",
-            od.generate(59),
-            od.ttl()
-        );
-    }
-
-    #[ignore]
-    #[test]
-    fn verify_totp_1111111109_sec() {
-        let key = data_encoding::BASE32_NOPAD.encode("12345678901234567890".as_bytes());
-        let mut od = OtpData::from_key(key.as_str()).unwrap();
-        od.digits = 8;
-        od.algorithm = OtpAlgorithm::SHA1;
-        println!(
-            "od generate  is {:?} with ttl {:?}",
-            od.generate(1111111109),
-            od.ttl()
-        );
-
-        // Encoded key is GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ
-        // od.get_secret_base32() is GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ
-        println!("Key is {}", od.get_secret_base32());
-    }
-
-    #[ignore]
-    #[test]
-    fn verify_otp1() {
-        let od = OtpData::from_key("BASE32SECRET3232").unwrap();
-        println!("Od is {:?}", od);
-
-        println!(
-            "od generate  is {:?} with ttl {:?}",
-            od.generate_current(),
-            od.ttl()
-        );
-    }
 
     // --- Non-ignored unit tests ---
 

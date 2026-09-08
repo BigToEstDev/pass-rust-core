@@ -1,4 +1,4 @@
-// The botan src used by rust botan v0.10.7 is https://github.com/randombit/botan/blob/f60608b8818c7bb8579fe797122ed6116f4134af/src
+﻿// The botan src used by rust botan v0.10.7 is https://github.com/randombit/botan/blob/f60608b8818c7bb8579fe797122ed6116f4134af/src
 // This is linked as git submodule in https://github.com/randombit/botan-rs/tree/0.10.7/botan-src
 
 // See https://github.com/randombit/botan/blob/f60608b8818c7bb8579fe797122ed6116f4134af/src/lib/ffi/ffi.h to see all
@@ -25,8 +25,6 @@ pub fn print_crypto_lib_info() {
 #[cfg(test)]
 mod tests {
     use crate::{crypto::get_random_bytes, db::ContentCipherId};
-
-    #[ignore]
     #[test]
     fn verify_aes256_encrypt_decrypt_botan() {
         let (_uuid, enc_iv) = ContentCipherId::Aes256.uuid_with_iv().unwrap();
@@ -52,8 +50,6 @@ mod tests {
         // let decrypted = cipher.decrypt(&encrypted, &key).unwrap();
         // assert_eq!(text.as_bytes(),decrypted);
     }
-
-    #[ignore]
     #[test]
     fn verify_chacha20_encrypt_decrypt_botan() {
         let (_uuid, enc_iv) = ContentCipherId::ChaCha20.uuid_with_iv().unwrap();
@@ -76,8 +72,6 @@ mod tests {
         // let decrypted = cipher.decrypt(&encrypted, &key).unwrap();
         // assert_eq!(text.as_bytes(),decrypted);
     }
-
-    #[ignore]
     #[test]
     fn verify_phash_argon2() {
         // See https://botan.randombit.net/handbook/api_ref/pbkdf.html#pbkdf-example

@@ -1,4 +1,4 @@
-// pub mod callback_service;
+﻿// pub mod callback_service;
 
 // For now import feature is supported only in desktop app
 #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
@@ -38,7 +38,6 @@ extern crate log;
 #[cfg(test)]
 mod tests {
     #[test]
-    #[ignore]
     fn test1() {
         let v1 = [2, 3, 4];
         let v = &v1[..];
@@ -58,7 +57,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test3() {
         use crate::util::u8_arr_to_i8_arr;
         let a: [u8; 32] = [
@@ -72,7 +70,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test4() {
         //let a:u64 = 488976;
 

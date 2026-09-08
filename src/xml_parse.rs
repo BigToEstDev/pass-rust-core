@@ -1782,8 +1782,6 @@ mod tests {
             // Ignore errors initializing the logger if tests race to configure it
             .try_init();
     }
-
-    #[ignore]
     #[test]
     fn verify_escape_unescape() {
         let s = "asddaads\nKim's idea";
@@ -1826,8 +1824,6 @@ mod tests {
         let mut reader = XmlReader::new(xml.as_bytes(), None);
         assert!(reader.parse().is_ok());
     }
-
-    #[ignore]
     #[test]
     fn read_sample_text_xml() {
         init();
@@ -1925,8 +1921,6 @@ mod tests {
         assert_eq!(r.is_ok(), true);
         println!(" Kp is {:?}", r.unwrap());
     }
-
-    #[ignore]
     #[test]
     fn read_sample_xml_fail1() {
         init();
@@ -2162,7 +2156,6 @@ mod tests {
     }
 
     // Key xml file related reading and writing tests
-    #[ignore]
     #[test]
     fn verify_reading_file_key_xml() {
         // Data text is formatted
@@ -2201,8 +2194,6 @@ mod tests {
         println!(" r1 is {:?}", r1);
         assert!(r1.verify_checksum().is_ok());
     }
-
-    #[ignore]
     #[test]
     fn verify_write_file_key_xml() {
         let data = "ABA681B2C6E19C74E671EDEC41D5AC099089F4B4605937B5B3E211AD0056B325";
@@ -2231,8 +2222,6 @@ mod tests {
 
         assert!(r1.verify_checksum().is_ok());
     }
-
-    #[ignore]
     #[test]
     fn verify_generate_xml_key() {
         let r = KeyFileData::generate_key_data();

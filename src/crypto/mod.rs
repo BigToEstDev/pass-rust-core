@@ -1,4 +1,4 @@
-pub mod kdf;
+﻿pub mod kdf;
 use crate::{
     constants,
     error::{Error, Result},
@@ -85,8 +85,6 @@ pub fn init_log_lib_info() {
 mod tests {
     use super::*;
     use crate::util::init_test_logging;
-
-    #[ignore]
     #[test]
     fn check_hmac_sha256() {
         init_log_lib_info();
@@ -99,8 +97,6 @@ mod tests {
         println!("r is {}", r);
         assert!(r);
     }
-
-    #[ignore]
     #[test]
     fn veriy_aes_gcm() {
         let kc = KeyCipher::new();
@@ -121,8 +117,6 @@ mod tests {
         let dec_result = kc.decrypt(&enc_result).unwrap();
         assert_eq!(plain_text.as_ref(), &dec_result);
     }
-
-    #[ignore]
     #[test]
     fn verify_aes256_encrypt_decrypt() {
         init_test_logging();

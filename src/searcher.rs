@@ -52,7 +52,6 @@ mod tests {
     use crate::db_content::{Entry, FieldDataType, KeyValue};
     use crate::searcher::*;
 
-    #[ignore]
     #[test]
     fn verify_simple_search() {
         let mut e = Entry::new();
@@ -198,20 +197,6 @@ mod tests {
         // if let Err(e) = found {
         //     println!("found is {}", e);
         // }
-    }
-
-    #[ignore]
-    #[test]
-    fn test1() {
-        let term = "(?i)Github"; //"https://github.com/login"
-
-        let re = Regex::new(&term).unwrap();
-
-        let s = "https://github.com/login";
-
-        let m = re.is_match(&s);
-
-        println!("m is {}", m);
     }
 
     // --- Non-ignored unit tests ---

@@ -1,4 +1,4 @@
-use log::error;
+﻿use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -641,8 +641,6 @@ mod tests {
 
         entry_types
     }
-
-    #[ignore]
     #[test]
     fn verify_optimized_encode_decode_entry_type() {
         let mut et1 = UUID_TO_ENTRY_TYPE_MAP
@@ -699,8 +697,6 @@ mod tests {
         // let s = vd.into_name_prefixed_string().unwrap();
         // println!("Serialized str size is {} ", s.len());
     }
-
-    #[ignore]
     #[test]
     fn verify_rmp_encode_decode() {
         let entry_types = test_data();
