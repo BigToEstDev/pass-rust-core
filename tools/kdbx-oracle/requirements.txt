@@ -1,0 +1,26 @@
+# kdbx-oracle: независимая (не наша) реализация KDBX4 как эталон для тестов.
+# Только dev-инструмент — в поставку приложения не попадает.
+#
+# Установка (Windows, из корня pass-rust-core):
+#   python -m venv .venv
+#   .venv/Scripts/python.exe -m pip install --only-binary=:all: -r tools/kdbx-oracle/requirements.txt
+#
+# --only-binary=:all: обязателен: иначе pip при отсутствии wheel начнёт собирать
+# lxml / pycryptodomex / argon2-cffi через MSVC.
+#
+# Версии пиннятся точно: молчаливый апдейт может изменить генерируемые фикстуры.
+# Обновлять осознанно — с перегенерацией фикстур и полным прогоном cargo test.
+
+pykeepass==4.2.0
+
+# Транзитивные (зафиксированы для воспроизводимости)
+argon2-cffi==25.1.0
+argon2-cffi-bindings==26.1.0
+cffi==2.1.1
+construct==2.10.70
+importlib_metadata==9.0.1
+lxml==6.1.3
+pycparser==3.0
+pycryptodomex==3.23.0
+PyOTP==2.10.0
+zipp==4.1.0

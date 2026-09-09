@@ -10,3 +10,7 @@ WixTools
 /test_data/
 
 Test1.xml
+
+# Python venv для tools/kdbx-oracle (dev-инструмент, см. tools/kdbx-oracle/README.md)
+/.venv/
+__pycache__/
