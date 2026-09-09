@@ -161,3 +161,76 @@ fn check_return_code(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Argon2Kdf, Kdf, VARIANT_ARGON2_D, VARIANT_ARGON2_ID};
+
+    // Эталонные значения получены официальными биндингами референсной реализации Argon2
+    // (argon2-cffi 25.1.0, крейт tools/kdbx-oracle), а не нашим кодом.
+    //
+    // Официальный вектор RFC 9106 через наш API недостижим: там salt 16 байт плюс secret и
+    // associated data, а `transform_key` жёстко берёт salt 32 байта и передаёт secret/ad как
+    // null (см. выше в этом файле). Поэтому вектор снят для нашей формы параметров.
+    // Сам примитив против RFC 9106 проверяется тестами крейта `argon2` (появится в Step 10).
+
+    const PASSWORD: [u8; 32] = [0x01; 32];
+    const SALT: [u8; 32] = [0x02; 32];
+
+    const MEMORY_8_MIB: u64 = 8 * 1024 * 1024;
+    const ITERATIONS: u64 = 2;
+    const PARALLELISM: u32 = 2;
+
+    const EXPECTED_ARGON2D: &str =
+        "c9bd6947c5082c4e2e634ea4d7863939e94b18b516505c372922f95df0ea5bb9";
+    const EXPECTED_ARGON2ID: &str =
+        "50b87226bb37ae4fb8d2ec86c5a944c4e361c7054f47a263df3a41911e56cba2";
+
+    fn kdf_with_fixed_salt(variant: u32) -> Argon2Kdf {
+        Argon2Kdf {
+            salt: SALT.to_vec(),
+            memory: MEMORY_8_MIB,
+            iterations: ITERATIONS,
+            parallelism: PARALLELISM,
+            version: 19,
+            variant,
+        }
+    }
+
+    #[test]
+    fn verify_argon2d_reference_vector() {
+        let transformed = kdf_with_fixed_salt(VARIANT_ARGON2_D)
+            .transform_key(PASSWORD.to_vec())
+            .unwrap();
+        assert_eq!(hex::encode(&transformed), EXPECTED_ARGON2D);
+    }
+
+    #[test]
+    fn verify_argon2id_reference_vector() {
+        let transformed = kdf_with_fixed_salt(VARIANT_ARGON2_ID)
+            .transform_key(PASSWORD.to_vec())
+            .unwrap();
+        assert_eq!(hex::encode(&transformed), EXPECTED_ARGON2ID);
+    }
+
+    // Варианты должны давать разный результат: если параметр variant где-то потеряется,
+    // оба теста выше могут остаться зелёными по совпадению только при одинаковых выходах.
+    #[test]
+    fn verify_argon2_variants_differ() {
+        let d = kdf_with_fixed_salt(VARIANT_ARGON2_D)
+            .transform_key(PASSWORD.to_vec())
+            .unwrap();
+        let id = kdf_with_fixed_salt(VARIANT_ARGON2_ID)
+            .transform_key(PASSWORD.to_vec())
+            .unwrap();
+        assert_ne!(d, id, "Argon2d и Argon2id дали одинаковый результат");
+    }
+
+    // uuid_bytes должен соответствовать варианту — иначе KDBX-файл будет помечен не тем KDF
+    #[test]
+    fn verify_variant_uuids() {
+        use crate::constants::uuid::{ARGON2_D_KDF, ARGON2_ID_KDF};
+        assert_eq!(Argon2Kdf::variant_2d().uuid_bytes(), ARGON2_D_KDF);
+        assert_eq!(Argon2Kdf::variant_2id().uuid_bytes(), ARGON2_ID_KDF);
+    }
+}
