@@ -83,18 +83,6 @@ pub fn sha256_hash_from_slice(data: &[u8]) -> Result<Vec<u8>> {
     Ok(hasher.finish()?)
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn check_hmac_sha256() {
-        use super::*;
-        let key = "my secret and secure key of bytes with any size".as_bytes();
-        let data1 = "input message".as_bytes();
-
-        let h1 = hmac_sha256_from_slices(&key, &[&data1]).unwrap();
-
-        let r = verify_hmac_sha256(&key, &[&data1], &h1).unwrap();
-        println!("r is {}", r);
-        assert!(r);
-    }
-}
+// Тест check_hmac_sha256 удалён как дубль: он проверял лишь самосогласованность
+// (посчитать HMAC и тут же сверить его с собой). HMAC проверяется векторами
+// RFC 4231 / RFC 2202 в crypto/mod.rs.

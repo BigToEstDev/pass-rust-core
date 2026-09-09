@@ -86,18 +86,6 @@ mod tests {
     use super::*;
     use crate::util::init_test_logging;
     #[test]
-    fn check_hmac_sha256() {
-        init_log_lib_info();
-        use super::*;
-        let key = "my secret and secure key of bytes with any size".as_bytes();
-        let data1 = "input message".as_bytes();
-        let h1 = hmac_sha256_from_slices(&key, &[&data1]).unwrap();
-
-        let r = verify_hmac_sha256(&key, &[&data1], &h1).unwrap();
-        println!("r is {}", r);
-        assert!(r);
-    }
-    #[test]
     fn veriy_aes_gcm() {
         let kc = KeyCipher::new();
 
